@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Generador de INSERT SQL</title>
+<style>
+    body { font-family: Arial; padding: 20px; background: #f3f3f3; }
+    .card { background: white; padding: 20px; border-radius: 10px; max-width: 700px; margin: auto; box-shadow: 0px 0px 10px #ccc; }
+    input, select, button, textarea { padding: 10px; margin: 5px 0; width: 100%; font-size: 16px; }
+    button { background: #0077ff; color: white; border: none; cursor: pointer; border-radius: 5px; }
+    button:hover { background: #005ae0; }
+    .attr { padding: 10px; background: #eee; border-radius: 5px; margin-top: 10px; }
+    .rangoInt, .rangoFloat { display: none; margin-top: 10px; background: #fff; padding: 10px; border-radius: 5px; border:1px solid #ccc; }
+    .btn-small { width:auto; padding:5px 10px; font-size:14px; margin-left:5px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Generador de INSERT SQL</h2>
+
+    <label>Nombre de la tabla:</label>
+    <input id="tabla" type="text">
+
+    <label>Cantidad de atributos:</label>
+    <input id="cantAtributos" type="number" min="1" value="2">
+
+    <button onclick="generarAtributos()">Crear atributos</button>
+
+    <div id="atributos"></div>
+
+    <label>Cantidad de filas a generar:</label>
+    <input id="cantFilas" type="number" min="1" value="100000">
+
+    <button onclick="generarSQL()">Generar .sql</button>
+</div>
+
+<script>
+// ======================================================
+const calles = ["San Martín","Belgrano","Rivadavia","Sarmiento","Mitre"];
+function numeroCalle(){return Math.floor(Math.random()*4000)+1;}
+
+// ======================================================
+function generarAtributos() {
+    const cont = document.getElementById("atributos");
+    cont.innerHTML = "";
+    const n = parseInt(document.getElementById("cantAtributos").value);
+
+    for (let i = 0; i < n; i++) {
+
+        const div = document.createElement("div");
+        div.className = "attr";
+
+        div.innerHTML = `
+            <label>Atributo ${i + 1}</label>
+            <input type="text" class="nombre" placeholder="nombre del atributo">
+
+            <div style="display:flex; gap:10px; align-items:center;">
+                <select class="tipo" style="flex:1;" onchange="cambioTipo(this)">
+                    <option value="int">int</option>
+                    <option value="float">float</option>
+                    <option value="varchar">varchar</option>
+                    <option value="date">date</option>
+                    <option value="rownum">Id Autoincrement</option>
+                    <option value="email">email</option>
+                    <option value="random_name">random_name</option>
+                    <option value="random_lastname">random_lastname</option>
+                    <option value="random_fullname">random_fullname</option>
+                    <option value="direccion">direccion</option>
+                </select>
+
+                <button class="btn-small btnRango" onclick="toggleRango(this)">Configurar rango</button>
+            </div>
+
+            <div class="rangoInt">
+                <label>Mínimo:</label>
+                <input type="number" class="intMin" placeholder="default 0">
+
+                <label>Máximo:</label>
+                <input type="number" class="intMax" placeholder="default 1000000">
+            </div>
+
+            <div class="rangoFloat">
+                <label>Mínimo:</label>
+                <input type="number" class="floatMin" placeholder="default 0">
+
+                <label>Máximo:</label>
+                <input type="number" class="floatMax" placeholder="default 100">
+
+                <label>Decimales:</label>
+                <input type="number" class="floatDec" placeholder="2">
+            </div>
+        `;
+
+        cont.appendChild(div);
+
+        // Al inicio, solo mostrar rango si es INT
+        div.querySelector(".btnRango").style.display = "inline-block";
+    }
+}
+
+// ======================================================
+// Cambiar tipo → solo mostrar botón si corresponde
+function cambioTipo(sel) {
+    const cont = sel.parentElement.parentElement;
+    const btn = cont.querySelector(".btnRango");
+    const intBox = cont.querySelector(".rangoInt");
+    const floatBox = cont.querySelector(".rangoFloat");
+
+    intBox.style.display = "none";
+    floatBox.style.display = "none";
+
+    if (sel.value === "int" || sel.value === "float") {
+        btn.style.display = "inline-block";
+    } else {
+        btn.style.display = "none";
+    }
+}
+
+// ======================================================
+function toggleRango(btn) {
+    const cont = btn.parentElement.parentElement;
+    const tipo = cont.querySelector(".tipo").value;
+
+    const intBox = cont.querySelector(".rangoInt");
+    const floatBox = cont.querySelector(".rangoFloat");
+
+    intBox.style.display = "none";
+    floatBox.style.display = "none";
+
+    if (tipo === "int") {
+        intBox.style.display = "block";
+    }
+    if (tipo === "float") {
+        floatBox.style.display = "block";
+    }
+}
+
+// ======================================================
+function randomVarchar() {
+    const chars = "abcdefghijklmnopqrstuvwxyz";
+    let s = "";
+    for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random()*chars.length)];
+    return `'${s}'`;
+}
+
+function randomDate() {
+    const y = 2020 + Math.floor(Math.random()*6);
+    const m = String(1+Math.floor(Math.random()*12)).padStart(2,"0");
+    const d = String(1+Math.floor(Math.random()*28)).padStart(2,"0");
+    return `'${y}-${m}-${d}'`;
+}
+
+// ======================================================
+function generarValor(tipo, i, idx) {
+
+    const elem = document.getElementsByClassName("tipo")[idx].parentElement.parentElement;
+
+    if (tipo === "int") {
+        const min = parseInt(elem.querySelector(".intMin").value || "0");
+        const max = parseInt(elem.querySelector(".intMax").value || "1000000");
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    if (tipo === "float") {
+        const min = parseFloat(elem.querySelector(".floatMin").value || "0");
+        const max = parseFloat(elem.querySelector(".floatMax").value || "1000000");
+        const dec = parseInt(elem.querySelector(".floatDec").value || "2");
+        return (Math.random() * (max - min) + min).toFixed(dec);
+    }
+
+    switch(tipo){
+        case "varchar": return randomVarchar();
+        case "date": return randomDate();
+        case "rownum": return i + 1;
+        case "email": return `'email${i}@test.com'`;
+        case "random_name": return `'Nombre${i}'`;
+        case "random_lastname": return `'Apellido${i}'`;
+        case "random_fullname": return `'Nombre${i} Apellido${i}'`;
+        case "direccion":
+            const c = calles[Math.floor(Math.random()*calles.length)];
+            return `'${c} ${numeroCalle()}'`;
+    }
+    return "NULL";
+}
+
+// ======================================================
+async function generarSQL() {
+    const tabla = document.getElementById("tabla").value.trim();
+    const filas = parseInt(document.getElementById("cantFilas").value);
+
+    const nombres = [...document.getElementsByClassName("nombre")].map(x=>x.value);
+    const tipos = [...document.getElementsByClassName("tipo")].map(x=>x.value);
+
+    let sql = "";
+
+    for (let i = 0; i < filas; i++) {
+        sql += `INSERT INTO ${tabla} (${nombres.join(", ")}) VALUES (`;
+        const valores = tipos.map((t, idx) => generarValor(t, i, idx));
+        sql += valores.join(", ");
+        sql += ");\n";
+    }
+
+    descargar(sql, tabla);
+}
+
+// ======================================================
+function descargar(texto, nombreTabla) {
+    const blob = new Blob([texto], { type:"text/sql" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombreTabla + ".sql";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
