@@ -12,10 +12,38 @@
     .attr { padding: 10px; background: #eee; border-radius: 5px; margin-top: 10px; }
     .rangoInt, .rangoFloat { display: none; margin-top: 10px; background: #fff; padding: 10px; border-radius: 5px; border:1px solid #ccc; }
     .btn-small { width:auto; padding:5px 10px; font-size:14px; margin-left:5px; }
+    #chkTipoPersonalizado {
+        width: 50px;
+    }
 </style>
 </head>
 <body>
 
+<!-- ====================================================== -->
+<!-- ===========   CARD PARA TIPOS PERSONALIZADOS   ======== -->
+<!-- ====================================================== -->
+<div class="card" style="margin-bottom:20px; border-left:5px solid #0077ff;">
+    <h3 style="margin-top:0;">Tipos de dato personalizados</h3>
+
+    <label style="font-weight:bold;">
+        <input type="checkbox" id="chkTipoPersonalizado" onclick="toggleTipoPersonalizado()">
+        Crear tipo de dato repetitivo (cíclico)
+    </label>
+
+    <div id="tipoPersonalizadoDiv" style="display:none; margin-top:10px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd;">
+        <label style="font-weight:bold;">Nombre del tipo:</label>
+        <input id="nombreTipoPers" type="text" placeholder="Ej: marcas, colores, estados">
+
+        <label style="font-weight:bold;">Valores (lista secuencial):</label>
+        <textarea id="valoresTipoPers" rows="3" placeholder='Ej: [Rojo, Verde, Azul]' style="font-family:monospace;"></textarea>
+
+        <button onclick="guardarTipoPersonalizado()">Guardar tipo personalizado</button>
+    </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- ============   CARD GENERADOR DE INSERTS   ============ -->
+<!-- ====================================================== -->
 <div class="card">
     <h2>Generador de INSERT SQL</h2>
 
@@ -37,19 +65,76 @@
 
 <script>
 // ======================================================
+// LISTA DE CALLES
+// ======================================================
 const calles = ["San Martín","Belgrano","Rivadavia","Sarmiento","Mitre"];
 function numeroCalle(){return Math.floor(Math.random()*4000)+1;}
 
+// ======================================================
+// TIPOS PERSONALIZADOS EN LOCALSTORAGE
+// ======================================================
+function cargarTiposPersonalizados() {
+    return JSON.parse(localStorage.getItem("tiposPersonalizados") || "{}");
+}
+
+function guardarTiposPersonalizados(obj) {
+    localStorage.setItem("tiposPersonalizados", JSON.stringify(obj));
+}
+
+function toggleTipoPersonalizado() {
+    document.getElementById("tipoPersonalizadoDiv").style.display =
+        document.getElementById("chkTipoPersonalizado").checked ? "block" : "none";
+}
+
+function guardarTipoPersonalizado() {
+    const nombre = document.getElementById("nombreTipoPers").value.trim();
+    const texto = document.getElementById("valoresTipoPers").value.trim();
+
+    if (!nombre || !texto) {
+        alert("Debe completar nombre y valores.");
+        return;
+    }
+
+    if (!texto.startsWith("[") || !texto.endsWith("]")) {
+        alert("Formato inválido. Debe comenzar con [ y terminar con ]");
+        return;
+    }
+
+    let contenido = texto.slice(1, -1).trim();
+    let valores = contenido.split(",").map(v => v.trim()).filter(v => v.length > 0);
+
+    if (valores.length === 0) {
+        alert("Debe ingresar al menos una opción.");
+        return;
+    }
+
+    const tipos = cargarTiposPersonalizados();
+    tipos[nombre] = valores;
+    guardarTiposPersonalizados(tipos);
+
+    alert("Tipo guardado correctamente.");
+    generarAtributos();
+}
+
+// ======================================================
+// GENERAR ATRIBUTOS
 // ======================================================
 function generarAtributos() {
     const cont = document.getElementById("atributos");
     cont.innerHTML = "";
     const n = parseInt(document.getElementById("cantAtributos").value);
 
+    const tiposPers = cargarTiposPersonalizados();
+
     for (let i = 0; i < n; i++) {
 
         const div = document.createElement("div");
         div.className = "attr";
+
+        let opcionesPersonalizadas = "";
+        for (const t in tiposPers) {
+            opcionesPersonalizadas += `<option value="pers_${t}">${t}</option>`;
+        }
 
         div.innerHTML = `
             <label>Atributo ${i + 1}</label>
@@ -67,6 +152,7 @@ function generarAtributos() {
                     <option value="random_lastname">random_lastname</option>
                     <option value="random_fullname">random_fullname</option>
                     <option value="direccion">direccion</option>
+                    ${opcionesPersonalizadas}
                 </select>
 
                 <button class="btn-small btnRango" onclick="toggleRango(this)">Configurar rango</button>
@@ -93,14 +179,12 @@ function generarAtributos() {
         `;
 
         cont.appendChild(div);
-
-        // Al inicio, solo mostrar rango si es INT
-        div.querySelector(".btnRango").style.display = "inline-block";
     }
 }
 
 // ======================================================
-// Cambiar tipo → solo mostrar botón si corresponde
+// CAMBIO DE TIPO (rango INT/FLOAT)
+// ======================================================
 function cambioTipo(sel) {
     const cont = sel.parentElement.parentElement;
     const btn = cont.querySelector(".btnRango");
@@ -117,7 +201,6 @@ function cambioTipo(sel) {
     }
 }
 
-// ======================================================
 function toggleRango(btn) {
     const cont = btn.parentElement.parentElement;
     const tipo = cont.querySelector(".tipo").value;
@@ -128,14 +211,12 @@ function toggleRango(btn) {
     intBox.style.display = "none";
     floatBox.style.display = "none";
 
-    if (tipo === "int") {
-        intBox.style.display = "block";
-    }
-    if (tipo === "float") {
-        floatBox.style.display = "block";
-    }
+    if (tipo === "int") intBox.style.display = "block";
+    if (tipo === "float") floatBox.style.display = "block";
 }
 
+// ======================================================
+// GENERADORES RANDOM
 // ======================================================
 function randomVarchar() {
     const chars = "abcdefghijklmnopqrstuvwxyz";
@@ -152,8 +233,19 @@ function randomDate() {
 }
 
 // ======================================================
+// GENERAR VALOR (incluye tipos personalizados)
+// ======================================================
 function generarValor(tipo, i, idx) {
 
+    // TIPOS PERSONALIZADOS → pers_xxx
+    if (tipo.startsWith("pers_")) {
+        const key = tipo.replace("pers_", "");
+        const tiposPers = cargarTiposPersonalizados();
+        const arr = tiposPers[key];
+        return `'${arr[i % arr.length]}'`;
+    }
+
+    // Obtener contenedor del atributo
     const elem = document.getElementsByClassName("tipo")[idx].parentElement.parentElement;
 
     if (tipo === "int") {
@@ -185,6 +277,8 @@ function generarValor(tipo, i, idx) {
 }
 
 // ======================================================
+// GENERAR SQL
+// ======================================================
 async function generarSQL() {
     const tabla = document.getElementById("tabla").value.trim();
     const filas = parseInt(document.getElementById("cantFilas").value);
@@ -204,6 +298,8 @@ async function generarSQL() {
     descargar(sql, tabla);
 }
 
+// ======================================================
+// DESCARGAR ARCHIVO
 // ======================================================
 function descargar(texto, nombreTabla) {
     const blob = new Blob([texto], { type:"text/sql" });
