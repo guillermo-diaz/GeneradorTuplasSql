@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Generador de INSERT SQL</title>
+<title>Generador de INSERT SQL / CSV</title>
 <style>
     body { font-family: Arial; padding: 20px; background: #f3f3f3; }
     .card { background: white; padding: 20px; border-radius: 10px; max-width: 700px; margin: auto; box-shadow: 0px 0px 10px #ccc; }
@@ -12,55 +12,40 @@
     .attr { padding: 10px; background: #eee; border-radius: 5px; margin-top: 10px; }
     .rangoInt, .rangoFloat { display: none; margin-top: 10px; background: #fff; padding: 10px; border-radius: 5px; border:1px solid #ccc; }
     .btn-small { width:auto; padding:5px 10px; font-size:14px; margin-left:5px; }
-    #chkTipoPersonalizado {
-        width: 50px;
-    }
+    #chkTipoPersonalizado { width: 50px; }
 </style>
 </head>
 <body>
 
-<!-- ====================================================== -->
-<!-- ===========   CARD PARA TIPOS PERSONALIZADOS   ======== -->
-<!-- ====================================================== -->
+<!-- TIPOS PERSONALIZADOS -->
 <div class="card" style="margin-bottom:20px; border-left:5px solid #0077ff;">
     <h3 style="margin-top:0;">Tipos de dato personalizados</h3>
-
     <label style="font-weight:bold;">
         <input type="checkbox" id="chkTipoPersonalizado" onclick="toggleTipoPersonalizado()">
         Crear tipo de dato repetitivo (cíclico)
     </label>
-
     <div id="tipoPersonalizadoDiv" style="display:none; margin-top:10px; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd;">
         <label style="font-weight:bold;">Nombre del tipo:</label>
         <input id="nombreTipoPers" type="text" placeholder="Ej: marcas, colores, estados">
-
         <label style="font-weight:bold;">Valores (lista secuencial):</label>
         <textarea id="valoresTipoPers" rows="3" placeholder='Ej: [Rojo, Verde, Azul]' style="font-family:monospace;"></textarea>
-
         <button onclick="guardarTipoPersonalizado()">Guardar tipo personalizado</button>
     </div>
 </div>
 
-<!-- ====================================================== -->
-<!-- ============   CARD GENERADOR DE INSERTS   ============ -->
-<!-- ====================================================== -->
+<!-- GENERADOR DE DATOS -->
 <div class="card">
-    <h2>Generador de INSERT SQL</h2>
-
+    <h2>Generador de datos SQL / CSV</h2>
     <label>Nombre de la tabla:</label>
     <input id="tabla" type="text">
-
     <label>Cantidad de atributos:</label>
     <input id="cantAtributos" type="number" min="1" value="2">
-
     <button onclick="generarAtributos()">Crear atributos</button>
-
     <div id="atributos"></div>
-
     <label>Cantidad de filas a generar:</label>
     <input id="cantFilas" type="number" min="1" value="100000">
-
     <button onclick="generarSQL()">Generar .sql</button>
+    <button onclick="generarCSV()">Generar .csv</button>
 </div>
 
 <script>
@@ -71,47 +56,29 @@ const calles = ["San Martín","Belgrano","Rivadavia","Sarmiento","Mitre"];
 function numeroCalle(){return Math.floor(Math.random()*4000)+1;}
 
 // ======================================================
-// TIPOS PERSONALIZADOS EN LOCALSTORAGE
+// TIPOS PERSONALIZADOS
 // ======================================================
 function cargarTiposPersonalizados() {
     return JSON.parse(localStorage.getItem("tiposPersonalizados") || "{}");
 }
-
 function guardarTiposPersonalizados(obj) {
     localStorage.setItem("tiposPersonalizados", JSON.stringify(obj));
 }
-
 function toggleTipoPersonalizado() {
     document.getElementById("tipoPersonalizadoDiv").style.display =
         document.getElementById("chkTipoPersonalizado").checked ? "block" : "none";
 }
-
 function guardarTipoPersonalizado() {
     const nombre = document.getElementById("nombreTipoPers").value.trim();
     const texto = document.getElementById("valoresTipoPers").value.trim();
-
-    if (!nombre || !texto) {
-        alert("Debe completar nombre y valores.");
-        return;
-    }
-
-    if (!texto.startsWith("[") || !texto.endsWith("]")) {
-        alert("Formato inválido. Debe comenzar con [ y terminar con ]");
-        return;
-    }
-
-    let contenido = texto.slice(1, -1).trim();
-    let valores = contenido.split(",").map(v => v.trim()).filter(v => v.length > 0);
-
-    if (valores.length === 0) {
-        alert("Debe ingresar al menos una opción.");
-        return;
-    }
-
+    if (!nombre || !texto) { alert("Debe completar nombre y valores."); return; }
+    if (!texto.startsWith("[") || !texto.endsWith("]")) { alert("Formato inválido."); return; }
+    let contenido = texto.slice(1,-1).trim();
+    let valores = contenido.split(",").map(v=>v.trim()).filter(v=>v.length>0);
+    if (valores.length === 0) { alert("Debe ingresar al menos una opción."); return; }
     const tipos = cargarTiposPersonalizados();
     tipos[nombre] = valores;
     guardarTiposPersonalizados(tipos);
-
     alert("Tipo guardado correctamente.");
     generarAtributos();
 }
@@ -123,23 +90,15 @@ function generarAtributos() {
     const cont = document.getElementById("atributos");
     cont.innerHTML = "";
     const n = parseInt(document.getElementById("cantAtributos").value);
-
     const tiposPers = cargarTiposPersonalizados();
-
-    for (let i = 0; i < n; i++) {
-
+    for (let i=0;i<n;i++){
         const div = document.createElement("div");
-        div.className = "attr";
-
-        let opcionesPersonalizadas = "";
-        for (const t in tiposPers) {
-            opcionesPersonalizadas += `<option value="pers_${t}">${t}</option>`;
-        }
-
-        div.innerHTML = `
-            <label>Atributo ${i + 1}</label>
+        div.className="attr";
+        let opcionesPersonalizadas="";
+        for(const t in tiposPers){opcionesPersonalizadas+=`<option value="pers_${t}">${t}</option>`;}
+        div.innerHTML=`
+            <label>Atributo ${i+1}</label>
             <input type="text" class="nombre" placeholder="nombre del atributo">
-
             <div style="display:flex; gap:10px; align-items:center;">
                 <select class="tipo" style="flex:1;" onchange="cambioTipo(this)">
                     <option value="int">int</option>
@@ -154,124 +113,75 @@ function generarAtributos() {
                     <option value="direccion">direccion</option>
                     ${opcionesPersonalizadas}
                 </select>
-
                 <button class="btn-small btnRango" onclick="toggleRango(this)">Configurar rango</button>
             </div>
-
             <div class="rangoInt">
                 <label>Mínimo:</label>
                 <input type="number" class="intMin" placeholder="default 0">
-
                 <label>Máximo:</label>
                 <input type="number" class="intMax" placeholder="default 1000000">
             </div>
-
             <div class="rangoFloat">
                 <label>Mínimo:</label>
                 <input type="number" class="floatMin" placeholder="default 0">
-
                 <label>Máximo:</label>
                 <input type="number" class="floatMax" placeholder="default 100">
-
                 <label>Decimales:</label>
                 <input type="number" class="floatDec" placeholder="2">
             </div>
         `;
-
         cont.appendChild(div);
     }
 }
 
 // ======================================================
-// CAMBIO DE TIPO (rango INT/FLOAT)
+// CAMBIO DE TIPO
 // ======================================================
 function cambioTipo(sel) {
-    const cont = sel.parentElement.parentElement;
-    const btn = cont.querySelector(".btnRango");
-    const intBox = cont.querySelector(".rangoInt");
-    const floatBox = cont.querySelector(".rangoFloat");
-
-    intBox.style.display = "none";
-    floatBox.style.display = "none";
-
-    if (sel.value === "int" || sel.value === "float") {
-        btn.style.display = "inline-block";
-    } else {
-        btn.style.display = "none";
-    }
+    const cont=sel.parentElement.parentElement;
+    const btn=cont.querySelector(".btnRango");
+    const intBox=cont.querySelector(".rangoInt");
+    const floatBox=cont.querySelector(".rangoFloat");
+    intBox.style.display="none"; floatBox.style.display="none";
+    if(sel.value==="int"||sel.value==="float"){btn.style.display="inline-block";}else{btn.style.display="none";}
 }
-
-function toggleRango(btn) {
-    const cont = btn.parentElement.parentElement;
-    const tipo = cont.querySelector(".tipo").value;
-
-    const intBox = cont.querySelector(".rangoInt");
-    const floatBox = cont.querySelector(".rangoFloat");
-
-    intBox.style.display = "none";
-    floatBox.style.display = "none";
-
-    if (tipo === "int") intBox.style.display = "block";
-    if (tipo === "float") floatBox.style.display = "block";
+function toggleRango(btn){
+    const cont=btn.parentElement.parentElement;
+    const tipo=cont.querySelector(".tipo").value;
+    const intBox=cont.querySelector(".rangoInt");
+    const floatBox=cont.querySelector(".rangoFloat");
+    intBox.style.display="none"; floatBox.style.display="none";
+    if(tipo==="int") intBox.style.display="block";
+    if(tipo==="float") floatBox.style.display="block";
 }
 
 // ======================================================
 // GENERADORES RANDOM
 // ======================================================
-function randomVarchar() {
-    const chars = "abcdefghijklmnopqrstuvwxyz";
-    let s = "";
-    for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random()*chars.length)];
-    return `'${s}'`;
-}
-
-function randomDate() {
-    const y = 2020 + Math.floor(Math.random()*6);
-    const m = String(1+Math.floor(Math.random()*12)).padStart(2,"0");
-    const d = String(1+Math.floor(Math.random()*28)).padStart(2,"0");
-    return `'${y}-${m}-${d}'`;
-}
+function randomVarchar(){const chars="abcdefghijklmnopqrstuvwxyz"; let s=""; for(let i=0;i<8;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return `'${s}'`;}
+function randomDate(){const y=2020+Math.floor(Math.random()*6); const m=String(1+Math.floor(Math.random()*12)).padStart(2,"0"); const d=String(1+Math.floor(Math.random()*28)).padStart(2,"0"); return `'${y}-${m}-${d}'`;}
 
 // ======================================================
-// GENERAR VALOR (incluye tipos personalizados)
+// GENERAR VALOR
 // ======================================================
-function generarValor(tipo, i, idx) {
-
-    // TIPOS PERSONALIZADOS → pers_xxx
-    if (tipo.startsWith("pers_")) {
-        const key = tipo.replace("pers_", "");
-        const tiposPers = cargarTiposPersonalizados();
-        const arr = tiposPers[key];
+function generarValor(tipo,i,idx){
+    if(tipo.startsWith("pers_")){
+        const key=tipo.replace("pers_","");
+        const arr=cargarTiposPersonalizados()[key];
         return `'${arr[i % arr.length]}'`;
     }
-
-    // Obtener contenedor del atributo
-    const elem = document.getElementsByClassName("tipo")[idx].parentElement.parentElement;
-
-    if (tipo === "int") {
-        const min = parseInt(elem.querySelector(".intMin").value || "0");
-        const max = parseInt(elem.querySelector(".intMax").value || "1000000");
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
-    if (tipo === "float") {
-        const min = parseFloat(elem.querySelector(".floatMin").value || "0");
-        const max = parseFloat(elem.querySelector(".floatMax").value || "1000000");
-        const dec = parseInt(elem.querySelector(".floatDec").value || "2");
-        return (Math.random() * (max - min) + min).toFixed(dec);
-    }
-
+    const elem=document.getElementsByClassName("tipo")[idx].parentElement.parentElement;
+    if(tipo==="int"){const min=parseInt(elem.querySelector(".intMin").value||"0"); const max=parseInt(elem.querySelector(".intMax").value||"1000000"); return Math.floor(Math.random()*(max-min+1))+min;}
+    if(tipo==="float"){const min=parseFloat(elem.querySelector(".floatMin").value||"0"); const max=parseFloat(elem.querySelector(".floatMax").value||"1000000"); const dec=parseInt(elem.querySelector(".floatDec").value||"2"); return (Math.random()*(max-min)+min).toFixed(dec);}
     switch(tipo){
         case "varchar": return randomVarchar();
         case "date": return randomDate();
-        case "rownum": return i + 1;
+        case "rownum": return i+1;
         case "email": return `'email${i}@test.com'`;
         case "random_name": return `'Nombre${i}'`;
         case "random_lastname": return `'Apellido${i}'`;
         case "random_fullname": return `'Nombre${i} Apellido${i}'`;
-        case "direccion":
-            const c = calles[Math.floor(Math.random()*calles.length)];
-            return `'${c} ${numeroCalle()}'`;
+        case "direccion": const c=calles[Math.floor(Math.random()*calles.length)]; return `'${c} ${numeroCalle()}'`;
     }
     return "NULL";
 }
@@ -279,34 +189,51 @@ function generarValor(tipo, i, idx) {
 // ======================================================
 // GENERAR SQL
 // ======================================================
-async function generarSQL() {
-    const tabla = document.getElementById("tabla").value.trim();
-    const filas = parseInt(document.getElementById("cantFilas").value);
-
-    const nombres = [...document.getElementsByClassName("nombre")].map(x=>x.value);
-    const tipos = [...document.getElementsByClassName("tipo")].map(x=>x.value);
-
-    let sql = "";
-
-    for (let i = 0; i < filas; i++) {
-        sql += `INSERT INTO ${tabla} (${nombres.join(", ")}) VALUES (`;
-        const valores = tipos.map((t, idx) => generarValor(t, i, idx));
-        sql += valores.join(", ");
-        sql += ");\n";
+function generarSQL(){
+    const tabla=document.getElementById("tabla").value.trim();
+    const filas=parseInt(document.getElementById("cantFilas").value);
+    const nombres=[...document.getElementsByClassName("nombre")].map(x=>x.value);
+    const tipos=[...document.getElementsByClassName("tipo")].map(x=>x.value);
+    let sql="";
+    for(let i=0;i<filas;i++){
+        sql+=`INSERT INTO ${tabla} (${nombres.join(", ")}) VALUES (`;
+        const valores=tipos.map((t,idx)=>generarValor(t,i,idx));
+        sql+=valores.join(", ");
+        sql+=");\n";
     }
+    descargar(sql,tabla,"sql");
+}
 
-    descargar(sql, tabla);
+// ======================================================
+// GENERAR CSV
+// ======================================================
+function generarCSV(){
+    const tabla=document.getElementById("tabla").value.trim();
+    const filas=parseInt(document.getElementById("cantFilas").value);
+    const nombres=[...document.getElementsByClassName("nombre")].map(x=>x.value);
+    const tipos=[...document.getElementsByClassName("tipo")].map(x=>x.value);
+    let csv=nombres.join(",")+"\n";
+    for(let i=0;i<filas;i++){
+        const valores=tipos.map((t,idx)=>{
+            let v=generarValor(t,i,idx);
+            if(typeof v==="string"&&v.startsWith("'")&&v.endsWith("'")) v=v.slice(1,-1);
+            if(typeof v==="string"&&(v.includes(",")||v.includes("\n"))) v=`"${v}"`;
+            return v;
+        });
+        csv+=valores.join(",")+"\n";
+    }
+    descargar(csv,tabla,"csv");
 }
 
 // ======================================================
 // DESCARGAR ARCHIVO
 // ======================================================
-function descargar(texto, nombreTabla) {
-    const blob = new Blob([texto], { type:"text/sql" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = nombreTabla + ".sql";
+function descargar(texto,nombreTabla,ext){
+    const blob=new Blob([texto], {type: ext==="csv"?"text/csv":"text/sql"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=nombreTabla+"."+ext;
     a.click();
     URL.revokeObjectURL(url);
 }
