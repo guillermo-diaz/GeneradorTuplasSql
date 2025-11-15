@@ -159,7 +159,18 @@ function toggleRango(btn){
 // GENERADORES RANDOM
 // ======================================================
 function randomVarchar(){const chars="abcdefghijklmnopqrstuvwxyz"; let s=""; for(let i=0;i<8;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return `'${s}'`;}
-function randomDate(){const y=2020+Math.floor(Math.random()*6); const m=String(1+Math.floor(Math.random()*12)).padStart(2,"0"); const d=String(1+Math.floor(Math.random()*28)).padStart(2,"0"); return `'${y}-${m}-${d}'`;}
+function randomDate() {
+  const start = new Date("2020-01-01");
+
+  // calcular hoy - 1 mes
+  const end = new Date();
+  end.setMonth(end.getMonth() - 1);
+
+  const randomTime = start.getTime() + Math.random() * (end.getTime() - start.getTime());
+  const date = new Date(randomTime);
+
+  return `'${date.toISOString().slice(0, 10)}'`;
+}
 
 // ======================================================
 // GENERAR VALOR
